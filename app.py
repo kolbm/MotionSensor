@@ -1,3 +1,4 @@
+
 import streamlit as st
 import serial
 import serial.tools.list_ports
@@ -8,7 +9,18 @@ import io
 st.set_page_config(page_title="ESP32 Distance Monitor", layout="wide")
 st.title("📏 ESP32 Distance Sensor Dashboard")
 
-# 🔌 List available COM ports
+st.markdown("""
+🔌 **Instructions**
+- Plug in your ESP32 **before or after** launching this app.
+- If you **just plugged it in**, click the **Refresh COM Ports** button below.
+- Then select the correct port from the dropdown and click **Start Sensor**.
+""")
+
+# Refresh button
+if st.button("🔄 Refresh COM Ports"):
+    st.rerun()
+
+# COM Port dropdown
 port_options = [port.device for port in serial.tools.list_ports.comports()]
 PORT = st.selectbox("Select Serial Port", port_options)
 BAUD = 115200
@@ -19,7 +31,7 @@ ser = None
 readings = []
 started = False
 
-# ▶️ Start sensor
+# Start Sensor
 if st.button("▶️ Start Sensor"):
     try:
         ser = serial.Serial(PORT, BAUD, timeout=1)
@@ -31,7 +43,7 @@ if st.button("▶️ Start Sensor"):
         st.error(f"❌ Could not open serial port: {e}")
         started = False
 
-# ⏹ Stop sensor
+# Stop Sensor
 if st.button("⏹ Stop Sensor"):
     if ser and ser.is_open:
         ser.write(b'x')
@@ -74,7 +86,7 @@ if started and ser and ser.is_open:
     except KeyboardInterrupt:
         st.warning("Stream stopped.")
 
-# 📊 Data table and CSV download
+# Show data and download
 if readings:
     st.subheader("📊 Recorded Readings")
     df = pd.DataFrame(readings)

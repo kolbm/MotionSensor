@@ -9,17 +9,22 @@ st.title("📏 ESP32 Distance Sensor Dashboard")
 
 st.markdown("""
 🔌 **Instructions**
-- Make sure your ESP32 is plugged into COM5.
-- Click ▶️ to start streaming distance data.
-- Click ⏹ to stop the stream and release the port.
+- Plug in your ESP32 before or after launching this app.
+- Click 🔄 to refresh the COM port list if needed.
+- Select the correct port and click ▶️ to start streaming.
 """)
 
-PORT = "COM5"
+# 🔄 Refresh COM port list
+if st.button("🔄 Refresh COM Ports"):
+    st.rerun()
+
+# 🛠 List available ports
+ports = [port.device for port in serial.tools.list_ports.comports()]
+PORT = st.selectbox("Select Serial Port", ports)
 BAUD = 115200
-sample_rate_ms = st.slider("Sample Rate (ms)", 10, 1000, 100, step=10)
+sample_rate_ms = st.slider("Sample Rate (ms)", 10, 1000, 100)
 unit = st.selectbox("Distance Unit", ["meters", "centimeters", "inches"])
 
-# Setup session state
 if "ser" not in st.session_state:
     st.session_state.ser = None
 if "running" not in st.session_state:
@@ -32,18 +37,17 @@ col1, col2 = st.columns(2)
 # ▶️ Start Sensor
 if col1.button("▶️ Start Sensor"):
     try:
-        # Close any old connection
         if st.session_state.ser and st.session_state.ser.is_open:
             st.session_state.ser.close()
         st.session_state.ser = serial.Serial(PORT, BAUD, timeout=1)
-        time.sleep(2)  # Allow time for serial to stabilize
+        time.sleep(2)
         st.session_state.ser.write(b's')
         st.session_state.running = True
-        st.success(f"✅ Connected and started on {PORT}")
+        st.success(f"✅ Connected to {PORT}")
     except Exception as e:
         st.session_state.ser = None
         st.session_state.running = False
-        st.error(f"❌ Could not open serial port: {e}")
+        st.error(f"❌ Could not open serial port {PORT}: {e}")
 
 # ⏹ Stop Sensor
 if col2.button("⏹ Stop Sensor"):
@@ -51,12 +55,12 @@ if col2.button("⏹ Stop Sensor"):
         if st.session_state.ser and st.session_state.ser.is_open:
             st.session_state.ser.write(b'x')
             st.session_state.ser.close()
-            st.success("Sensor stopped and port closed.")
+            st.success("Sensor stopped.")
         st.session_state.running = False
     except Exception as e:
         st.error(f"Error closing serial port: {e}")
 
-# 📈 Live data chart
+# 📈 Live Stream
 if st.session_state.running and st.session_state.ser and st.session_state.ser.is_open:
     chart = st.line_chart()
     try:
@@ -85,21 +89,19 @@ if st.session_state.running and st.session_state.ser and st.session_state.ser.is
                     time.sleep(sample_rate_ms / 1000.0)
 
                 except Exception as e:
-                    st.warning(f"⚠️ Parse error: {e}")
+                    st.warning(f"⚠️ Read error: {e}")
                     continue
     except KeyboardInterrupt:
-        st.warning("⏹ Stream stopped manually.")
+        st.warning("⏹ Stream stopped.")
 
-# 📥 Download CSV
+# 📥 CSV Download
 if readings:
     st.subheader("📊 Recorded Readings")
     df = pd.DataFrame(readings)
     st.dataframe(df)
-
-    csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        label="📥 Download CSV",
-        data=csv,
+        "📥 Download CSV",
+        data=df.to_csv(index=False).encode("utf-8"),
         file_name="distance_log.csv",
         mime="text/csv"
     )

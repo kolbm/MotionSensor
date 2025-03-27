@@ -7,7 +7,14 @@ import io
 st.set_page_config(page_title="ESP32 Distance Monitor", layout="wide")
 st.title("📏 ESP32 Distance Sensor Dashboard")
 
-PORT = st.text_input("Serial Port", "/dev/ttyUSB0" if not st.runtime.exists() else "COM3")
+import serial.tools.list_ports
+
+# Get a list of available COM ports
+ports = serial.tools.list_ports.comports()
+port_options = [port.device for port in ports]
+
+PORT = st.selectbox("Select Serial Port", port_options)
+
 BAUD = 115200
 sample_rate_ms = st.slider("Sample Rate (ms)", min_value=10, max_value=1000, value=100, step=10)
 unit = st.selectbox("Distance Unit", ["meters", "centimeters", "inches"])
